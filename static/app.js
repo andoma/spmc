@@ -381,6 +381,10 @@ Ext.onReady(function () {
     var store = Ext.create('Ext.data.Store', {
         autoLoad: true,
         model: 'My.Plugin',
+	sorters: [{
+            property: 'id',
+            direction: 'ASC'
+	}],
         proxy: {
             type: 'ajax',
             url: 'plugins',
