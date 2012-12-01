@@ -96,12 +96,18 @@ func ingestFile(f io.ReaderAt, size int64, u *User) (*PluginVersion, error) {
 			pv.IconDigest = hex.EncodeToString(h.Sum(nil));
 
 			f, _ = iconfile.Open();
+			defer f.Close();
 			err = stashSave(f, pv.IconDigest);
-			f.Close();
+			if err != nil {
+				return nil, err;
+			}
 		}
 	}
 
-	stashSave(io.NewSectionReader(f, 0, size), pv.PkgDigest);
+	err = stashSave(io.NewSectionReader(f, 0, size), pv.PkgDigest);
+	if err != nil {
+		return nil, err;
+	}
 
 	err = ingestVersion(pv, u);
 	if err != nil {

@@ -22,7 +22,10 @@ func stashSave(r io.Reader, digest string) error {
 	if err != nil {
 		return err;
 	}
-	io.Copy(f, r);
-	f.Close();
-	return nil;
+	_, err = io.Copy(f, r);
+	if err != nil {
+		return err;
+	}
+
+	return f.Close();
 }
