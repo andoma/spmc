@@ -505,6 +505,14 @@ Ext.onReady(function () {
 		handler: function() {
 		    window.open('logout','_self',false)
 		}
+	    }, '->', {
+		icon: 'static/icons/refresh.gif',
+		text: 'Refresh',
+		handler: function() {
+		    store.reload();
+		}
+
+		
 	    }]
         }],
 
