@@ -127,7 +127,7 @@ func main() {
 	});
 
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/spmc", func(w http.ResponseWriter, r *http.Request) {
 		u := getUser(r);
 
 		if r.Method == "GET" {
@@ -185,13 +185,11 @@ func main() {
 			c.Name = "auth";
 			c.Value = *value;
 			http.SetCookie(w, c);
-			http.Redirect(w, r, "/", 302);
+			http.Redirect(w, r, "spmc", 302);
 			return;
 		}
 
 	});
-
-
 
 	http.ListenAndServe("127.0.0.1:8080", httplog(http.DefaultServeMux));
 }
