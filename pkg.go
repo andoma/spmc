@@ -85,6 +85,9 @@ func ingestFile(f io.ReaderAt, size int64, u *User) (*PluginVersion, error) {
 	}
 
 	pv, err := pvFromZIPStream(*r);
+	if err != nil {
+		return nil, err;
+	}
 
 	err = ingestVersion(pv, u);
 	if err != nil {
