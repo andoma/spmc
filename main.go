@@ -24,6 +24,69 @@ func getUser(r *http.Request) *User {
 	return validateCookie(cookie.Value);
 }
 
+func roothandler(w http.ResponseWriter, r *http.Request) {
+	u := getUser(r);
+	
+	if r.Method == "GET" {
+		var filename string;
+		if u != nil {
+			filename = "static/index.html";
+		} else {
+			filename = "static/login.html";
+		}
+		
+		file, err := os.Open(filename);
+		if err != nil {
+			http.NotFound(w, r);
+		} else {
+			io.Copy(w, file);
+			file.Close();
+		}
+		return;
+	}
+
+	if r.Method == "POST" {
+		r.ParseForm();
+		var u *User;
+		var err error;
+		if len(r.Form["login"]) > 0 {
+			username := r.Form["username"][0];
+			password := r.Form["password"][0];
+			u, err = dbAuthUser(username, password);
+		} else if len(r.Form["register"]) > 0 {
+			username := r.Form["username"][0];
+			password := r.Form["password"][0];
+			email    := r.Form["email"][0];
+			u, err = dbAddUser(username, password, email);
+		} else {
+			http.NotFound(w, r);
+			return;
+		}
+
+
+		if err != nil {
+			w.WriteHeader(401);
+			w.Write([]byte(err.Error()));
+			return;
+		}
+
+
+		value, err := authenticateUser(u);
+		if err != nil {
+			w.WriteHeader(401);
+			w.Write([]byte(err.Error()));
+			return;
+		}
+
+		c := new(http.Cookie);
+		c.Name = "auth";
+		c.Value = *value;
+		http.SetCookie(w, c);
+		http.Redirect(w, r, "spmc/", 301);
+		return;
+	}
+}
+
 func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))));
 	http.HandleFunc("/plugins", func(w http.ResponseWriter, r *http.Request) {
@@ -111,7 +174,7 @@ func main() {
 		c.Value = "";
 		c.MaxAge = -1;
 		http.SetCookie(w, c);
-		http.Redirect(w, r, "/", 302);
+		http.Redirect(w, r, "spmc/", 302);
 	});
 
 	http.HandleFunc("/register.html", func(w http.ResponseWriter, r *http.Request) {
@@ -127,69 +190,11 @@ func main() {
 	});
 
 
-	http.HandleFunc("/spmc", func(w http.ResponseWriter, r *http.Request) {
-		u := getUser(r);
-
-		if r.Method == "GET" {
-			var filename string;
-			if u != nil {
-				filename = "static/index.html";
-			} else {
-				filename = "static/login.html";
-			}
-
-			file, err := os.Open(filename);
-			if err != nil {
-				http.NotFound(w, r);
-			} else {
-				io.Copy(w, file);
-				file.Close();
-			}
-			return;
-		}
-
-		if r.Method == "POST" {
-			r.ParseForm();
-			var u *User;
-			var err error;
-			if len(r.Form["login"]) > 0 {
-				username := r.Form["username"][0];
-				password := r.Form["password"][0];
-				u, err = dbAuthUser(username, password);
-			} else if len(r.Form["register"]) > 0 {
-				username := r.Form["username"][0];
-				password := r.Form["password"][0];
-				email    := r.Form["email"][0];
-				u, err = dbAddUser(username, password, email);
-			} else {
-				http.NotFound(w, r);
-				return;
-			}
 
 
-			if err != nil {
-				w.WriteHeader(401);
-				w.Write([]byte(err.Error()));
-				return;
-			}
+	http.HandleFunc("/spmc", roothandler);
+	http.HandleFunc("/", roothandler);
 
-
-			value, err := authenticateUser(u);
-			if err != nil {
-				w.WriteHeader(401);
-				w.Write([]byte(err.Error()));
-				return;
-			}
-
-			c := new(http.Cookie);
-			c.Name = "auth";
-			c.Value = *value;
-			http.SetCookie(w, c);
-			http.Redirect(w, r, "spmc", 302);
-			return;
-		}
-
-	});
 
 	http.ListenAndServe("127.0.0.1:8080", httplog(http.DefaultServeMux));
 }
