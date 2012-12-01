@@ -537,7 +537,7 @@ Ext.onReady(function () {
 
 	    rec = store.getById(autoopen);
 	    autoopen = null;
-	    current = vp.add(new plugineditor(rec.getData()));
+	    current = vp.add(new plugineditor(rec.getData(), user));
 	    vp.doLayout();
 	}
     });

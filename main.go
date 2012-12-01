@@ -152,6 +152,8 @@ func main() {
 		flen, _ := file.Seek(0, 2);
 		pv, err := ingestFile(file, flen, u);
 
+		w.Header().Set("Content-Type", "text/html; charset=utf-8");
+
 		if err != nil {
 			out, _ := json.Marshal(struct {
 				Success bool `json:"success"`;
