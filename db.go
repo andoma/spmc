@@ -55,7 +55,7 @@ func init() {
 	plugin_insert_stmt, err = db.Prepare("INSERT INTO plugin (id, owner) VALUES(?, ?)");
 	mysqlErrExit(err);
 
-	version_insert_stmt, err = db.Prepare("INSERT INTO version (plugin_id, version, type, author, showtime_min_version, title, synopsis, description, homepage, sha1, category) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+	version_insert_stmt, err = db.Prepare("INSERT INTO version (plugin_id, version, type, author, showtime_min_version, title, synopsis, description, homepage, pkg_digest, category, icon_digest) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 	mysqlErrExit(err);
 
 	version_delete_stmt, err = db.Prepare("DELETE FROM version WHERE plugin_id=? AND version=?");
@@ -84,7 +84,7 @@ func init() {
 
 	rows, _, err = db.Query("SELECT plugin_id, version, type, author, downloads," + 
                                 "published, showtime_min_version, title, synopsis, description," +
-                                "homepage, sha1, comment, category, approved FROM version");
+                                "homepage, pkg_digest, comment, category, approved, icon_digest FROM version");
 	mysqlErrExit(err);
 
 	for _, r := range rows {
@@ -102,10 +102,11 @@ func init() {
 		Synopsis: r.Str(8),
 		Description: r.Str(9),
 		Homepage: r.Str(10),
-		SHA1: r.Str(11),
+		PkgDigest: r.Str(11),
 		Comment: r.Str(12),
 		Category: r.Str(13),
 		Approved: r.Bool(14),
+		IconDigest: r.Str(15),
 		};
 		plugins[plugin_id].versions[version] = &v;
 	}
@@ -177,8 +178,9 @@ func ingestVersion(pv *PluginVersion, u *User) (error) {
 		pv.Synopsis,
 		pv.Description,
 		pv.Homepage,
-		pv.SHA1,
-		pv.Category);
+		pv.PkgDigest,
+		pv.Category,
+		pv.IconDigest);
 
 	if err != nil {
 		log.Println("MySQL error:", err);

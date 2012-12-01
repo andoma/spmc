@@ -10,25 +10,34 @@ import "errors"
 import "crypto/sha1"
 
 
-func pvFromZIPStream(r zip.Reader) (pv *PluginVersion, err error) {
+func findFile(r *zip.Reader, filename string) (f *zip.File) {
 	for _, f := range r.File {
-		if f.Name == "plugin.json" {
-			j, err := f.Open();
-			if err != nil {
-				log.Fatal(err);
-				return nil, err;
-			}			
-			pv = new(PluginVersion);
-			err = json.NewDecoder(j).Decode(pv);
-			j.Close();
-			if err != nil {
-				return nil, err;
-			}
-			return pv, nil;
+		if f.Name == filename {
+			return f;
 		}
 	}
-	err = errors.New("No 'plugin.json' found in archive");
-	return;
+	return nil;
+	
+}
+
+func pvFromZIPStream(r *zip.Reader) (pv *PluginVersion, err error) {
+	f := findFile(r, "plugin.json");
+	if f == nil {
+		return nil, errors.New("No 'plugin.json' found in archive");
+	}
+
+	j, err := f.Open();
+	if err != nil {
+		log.Fatal(err);
+		return nil, err;
+	}			
+	pv = new(PluginVersion);
+	err = json.NewDecoder(j).Decode(pv);
+	j.Close();
+	if err != nil {
+		return nil, err;
+	}
+	return pv, nil;
 }
 
 
@@ -39,7 +48,7 @@ func pvFromZIPFile(name string) (pv *PluginVersion, err error) {
 		return;
 	}
 	defer r.Close();
-	return pvFromZIPStream(r.Reader);
+	return pvFromZIPStream(&r.Reader);
 }
 
 
@@ -58,36 +67,41 @@ func pvFromJSON(name string) (pv *PluginVersion, err error) {
 }
 
 
-
-func (pv *PluginVersion) updateSHA1(filename string) (err error) {
-	r, err := os.Open(filename);
-	if err != nil {
-		log.Println(err);
-		return;
-	}
-	h := sha1.New();
-	io.Copy(h, r);
-	r.Close();
-	pv.SHA1 = hex.EncodeToString(h.Sum(nil));
-	return;
-}
-
-
-
-
-
-
-
 func ingestFile(f io.ReaderAt, size int64, u *User) (*PluginVersion, error) {
+
+	h := sha1.New();
+	io.Copy(h, io.NewSectionReader(f, 0, size));
+	digest := hex.EncodeToString(h.Sum(nil));
+
 	r, err := zip.NewReader(f, size);
 	if err != nil {
 		return nil, err;
 	}
 
-	pv, err := pvFromZIPStream(*r);
+	pv, err := pvFromZIPStream(r);
 	if err != nil {
 		return nil, err;
 	}
+
+
+	pv.PkgDigest = digest;
+
+	if len(pv.Icon) > 0 {
+		iconfile := findFile(r, pv.Icon);
+		if iconfile != nil {
+			f, _ := iconfile.Open();
+			h := sha1.New();
+			io.Copy(h, f);
+			f.Close();
+			pv.IconDigest = hex.EncodeToString(h.Sum(nil));
+
+			f, _ = iconfile.Open();
+			err = stashSave(f, pv.IconDigest);
+			f.Close();
+		}
+	}
+
+	stashSave(io.NewSectionReader(f, 0, size), pv.PkgDigest);
 
 	err = ingestVersion(pv, u);
 	if err != nil {

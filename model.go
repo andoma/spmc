@@ -51,8 +51,10 @@ type PluginVersion struct {
 	Synopsis        string `json:"synopsis"`;
 	Description     string `json:"description"`;
 	Homepage        string `json:"homepage"`;
-	SHA1            string `json:"sha1"`;
+	PkgDigest       string `json:"pkgdigest"`;
 	Category        string `json:"category"`;
+	Icon            string `json:"icon"`;
+	IconDigest      string `json:"icondigest"`;
 }
 
 type PluginVersions struct {

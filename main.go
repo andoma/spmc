@@ -191,12 +191,8 @@ func main() {
 		return;
 	});
 
-
-
-
 	http.HandleFunc("/spmc", roothandler);
 	http.HandleFunc("/", roothandler);
-
 
 	http.ListenAndServe("127.0.0.1:8080", httplog(http.DefaultServeMux));
 }
