@@ -1,6 +1,10 @@
 package main
 
 import "encoding/json"
+import "strings"
+import "strconv"
+import "errors"
+import "fmt"
 
 var plugins map[string]*Plugin = make(map[string]*Plugin);
 
@@ -35,6 +39,55 @@ func getPlugins(u *User) *Plugins {
 	return &p;
 }
 
+type Version struct {
+	v [4]int;
+}
+
+
+func parseVersionString(vstr string) (*Version, error) {
+	ver := new(Version);
+	vec := strings.Split(vstr, ".");
+	var err error;
+
+	if len(vec) < 1 || len(vec) > 4 {
+		return nil, errors.New(fmt.Sprintf("Malformed version '%s'",
+			vstr));
+	}
+	for i := 0; i < len(vec); i++ {
+		ver.v[i], err = strconv.Atoi(vec[i]);
+		if err != nil {
+			return nil, errors.New(
+				fmt.Sprintf("Malformed version '%s' -- %s",
+				vstr, err));
+		}
+	}
+	return ver, nil;
+}
+
+
+func (v *Version) isBiggerThan(l *Version) bool {
+	for i := 0; i < 4; i++ {
+		if v.v[i] > l.v[i] {
+			return true;
+		}
+		if v.v[i] < l.v[i] {
+			return false;
+		}
+	}
+	return false;
+}
+
+func (v *Version) isBiggerOrEqThan(l *Version) bool {
+	for i := 0; i < 4; i++ {
+		if v.v[i] > l.v[i] {
+			return true;
+		}
+		if v.v[i] < l.v[i] {
+			return false;
+		}
+	}
+	return true;
+}
 
 
 type PluginVersion struct {
