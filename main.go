@@ -193,5 +193,5 @@ func main() {
 
 
 
-	http.ListenAndServe(":8080", httplog(http.DefaultServeMux));
+	http.ListenAndServe("127.0.0.1:8080", httplog(http.DefaultServeMux));
 }
