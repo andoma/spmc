@@ -1,3 +1,6 @@
+CREATE DATABASE showtime_plugins DEFAULT CHARACTER SET = 'utf8';
+CREATE USER 'plugcentral' IDENTIFIED BY 'plugcentral';
+GRANT ALL PRIVILEGES ON showtime_plugins.* TO 'plugcentral';
 
 
 DROP TABLE version;
