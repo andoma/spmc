@@ -94,6 +94,9 @@ func ingestFile(f io.ReaderAt, size int64, u *User) (*PluginVersion, error) {
 	}
 
 
+	pv.Approved = u.Autoapprove;
+	pv.Published = false;
+
 	pv.PkgDigest = digest;
 
 	if len(pv.Icon) > 0 {
