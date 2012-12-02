@@ -252,6 +252,7 @@ func main() {
 				io.WriteString(w, err.Error());
 				return;
 			}
+			dbIncDownloads(c[2]);
 		}
 	});
 

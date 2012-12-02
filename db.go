@@ -24,7 +24,7 @@ var (
 	db = autorc.New(db_proto, "", db_addr, db_user, db_pass, db_name);
 	plugin_insert_stmt, version_insert_stmt, version_delete_stmt,
 		approved_set_stmt, published_set_stmt, user_query_stmt,
-		user_insert_stmt *autorc.Stmt;
+		user_insert_stmt, version_dlinc_stmt *autorc.Stmt;
 )
 
 func mysqlError(err error) (ret bool) {
@@ -73,6 +73,10 @@ func init() {
 	user_insert_stmt, err = db.Prepare("INSERT INTO users (username, salt, sha1, email) VALUES(?, ?, ?, ?)");
 	mysqlErrExit(err);
 
+	version_dlinc_stmt, err = db.Prepare("UPDATE version SET downloads=downloads+1 WHERE plugin_id = ? AND version = ?");
+	mysqlErrExit(err);
+
+
 	rows, _, err := db.Query("SELECT id, owner FROM plugin");
 	mysqlErrExit(err);
 
@@ -109,6 +113,7 @@ func init() {
 		IconDigest: r.Str(15),
 		};
 		plugins[plugin_id].versions[version] = &v;
+		pkgHashToVersion[v.PkgDigest] = &v;
 
 		v.pkg_ver, err = parseVersionString(v.Version);
 		if err != nil {
@@ -202,6 +207,7 @@ func ingestVersion(pv *PluginVersion, u *User) (error) {
 	}
 
 	p.versions[pv.Version] = pv;
+	pkgHashToVersion[pv.PkgDigest] = pv;
 	return nil;
 }
 
@@ -209,6 +215,8 @@ func deleteVersion(plugin, version string) {
 	p := plugins[plugin];
 	if p != nil {
 		version_delete_stmt.Exec(plugin, version);
+		pv := p.versions[version];
+		delete(pkgHashToVersion, pv.PkgDigest);
 		delete(p.versions, version);
 		log.Printf("Deleted version %s from plugin %s", version, plugin);
 	}
@@ -238,6 +246,14 @@ func setPublished(u *User, plugin, version string, set bool) {
 	}
 }
 
+
+func dbIncDownloads(digest string) {
+	pv := pkgHashToVersion[digest];
+	if pv != nil {
+		pv.Downloads++;
+		version_dlinc_stmt.Exec(pv.PluginId, pv.Version);
+	}
+}
 
 func dbAuthUser(username, password string) (*User, error) {
 	rows, _, err := user_query_stmt.Exec(username);

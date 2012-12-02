@@ -89,6 +89,7 @@ func (v *Version) isBiggerOrEqThan(l *Version) bool {
 	return true;
 }
 
+var pkgHashToVersion map[string]*PluginVersion = make(map[string]*PluginVersion);
 
 type PluginVersion struct {
 	Approved        bool   `json:"approved"`;
