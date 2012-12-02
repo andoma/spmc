@@ -30,6 +30,10 @@ func buildShowtimeIndex(reqver *Version) ([]byte, error) {
 	for _, p := range plugins {
 		var best *PluginVersion;
 		for _, pv := range p.versions {
+			if !pv.Approved {
+				continue;
+			}
+
 			if !pv.Published {
 				continue;
 			}
