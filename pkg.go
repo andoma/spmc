@@ -83,12 +83,12 @@ func ingestFile(f io.ReaderAt, size int64, u *User) (*PluginVersion, error) {
 		return nil, err;
 	}
 
-	_, err = parseVersionString(pv.Version);
+	pv.pkg_ver, err = parseVersionString(pv.Version);
 	if err != nil {
 		return nil, errors.New("'version' field in JSON -- " + err.Error());
 	}
 
-	_, err = parseVersionString(pv.ShowtimeVersion);
+	pv.showtime_ver, err = parseVersionString(pv.ShowtimeVersion);
 	if err != nil {
 		return nil, errors.New("'showtimeVersion' field in JSON -- " + err.Error());
 	}

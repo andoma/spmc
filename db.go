@@ -109,6 +109,20 @@ func init() {
 		IconDigest: r.Str(15),
 		};
 		plugins[plugin_id].versions[version] = &v;
+
+		v.pkg_ver, err = parseVersionString(v.Version);
+		if err != nil {
+			log.Println(err);
+			os.Exit(1);
+		}
+
+		v.showtime_ver, err = parseVersionString(v.ShowtimeVersion);
+		if err != nil {
+			log.Println(err);
+			os.Exit(1);
+		}
+
+
 	}
 }
 

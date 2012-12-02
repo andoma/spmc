@@ -6,7 +6,16 @@ import "net/http"
 import "log"
 import "strings"
 import "encoding/json"
+import "regexp"
+import "strconv"
+import "fmt"
+import "crypto/sha1"
 
+var ua_re *regexp.Regexp;
+
+func init() {
+	ua_re = regexp.MustCompile("^Showtime [^ ]+ ([0-9]+)\\.([0-9]+)\\.([0-9]+)"); 
+}
 
 func httplog(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -161,7 +170,6 @@ func main() {
 			}{false, err.Error()});
 			w.Write(out);
 		} else {
-			log.Printf("%s\n", pv);
 			out, _ := json.Marshal(struct {
 				Success bool `json:"success"`;
 				Version *PluginVersion `json:"result"`;
@@ -189,6 +197,62 @@ func main() {
 			file.Close();
 		}
 		return;
+	});
+
+	http.HandleFunc("/plugins-v1.json", func(w http.ResponseWriter, r *http.Request) {
+
+		var reqver *Version;
+
+		if len(r.Header["User-Agent"]) > 0 {
+			vers := ua_re.FindStringSubmatch(r.Header["User-Agent"][0]);
+			if len(vers) > 2 {
+				reqver = new(Version);
+				reqver.v[0], _ = strconv.Atoi(vers[1]);
+				reqver.v[1], _ = strconv.Atoi(vers[2]);
+				if len(vers) > 3 {
+					reqver.v[2], _ = strconv.Atoi(vers[3]);
+				}
+			}
+		}
+
+		msg, err := buildShowtimeIndex(reqver);
+		if err != nil {
+			w.WriteHeader(400);
+			io.WriteString(w, err.Error());
+			return;
+		}
+
+		h := sha1.New();
+		h.Write(msg);
+		digest := fmt.Sprintf("%x", h.Sum(nil));
+
+		if len(r.Header["If-None-Match"]) > 0 {
+			if digest == r.Header["If-None-Match"][0] {
+				fmt.Printf("Not modified\n");
+				w.WriteHeader(304);
+				return;
+				}
+		}
+		
+		w.Header().Set("ETag", digest);
+
+		w.Write(msg);
+	});
+
+	http.HandleFunc("/data/", func(w http.ResponseWriter, r *http.Request) {
+		c := strings.Split(r.URL.Path, "/");
+		if len(c) != 3 {
+			http.NotFound(w, r);
+		} else {
+			// filename is a digest of the contents so we set a 1 year expiry
+			w.Header().Set("Cache-Control", "max-age=31536000");
+			err := stashLoad(w, c[2]);
+			if err != nil {
+				w.WriteHeader(404);
+				io.WriteString(w, err.Error());
+				return;
+			}
+		}
 	});
 
 	http.HandleFunc("/spmc", roothandler);

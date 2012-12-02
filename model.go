@@ -108,6 +108,9 @@ type PluginVersion struct {
 	Category        string `json:"category"`;
 	Icon            string `json:"icon"`;
 	IconDigest      string `json:"icondigest"`;
+
+	showtime_ver    *Version;
+	pkg_ver         *Version;
 }
 
 type PluginVersions struct {

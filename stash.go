@@ -29,3 +29,24 @@ func stashSave(r io.Reader, digest string) error {
 
 	return f.Close();
 }
+
+
+
+func stashLoad(w io.Writer, digest string) error {
+	if len(digest) != 40 {
+		return errors.New("digest is not 40 chars");
+	}
+
+	basepath := stashpath + "/" + digest[0:2];
+
+	f, err := os.Open(basepath + "/" + digest[0:40]);
+	if err != nil {
+		return err;
+	}
+	_, err = io.Copy(w, f);
+	if err != nil {
+		return err;
+	}
+
+	return f.Close();
+}
