@@ -106,6 +106,28 @@ func main() {
 		}
 		w.Write(getPlugins(u).marshal());
 	});
+
+
+	http.HandleFunc("/plugins/", func(w http.ResponseWriter, r *http.Request) {
+		u := getUser(r);
+		if u == nil {
+			w.WriteHeader(401);
+			return;
+		}
+		if r.Method == "POST" {
+			c := strings.Split(r.URL.Path, "/");
+			if len(c) != 3 {
+				w.WriteHeader(400);
+				return;
+			}
+			r.ParseForm();
+			updatePlugin(u, c[2], r.Form["betasecret"][0]);
+			w.WriteHeader(200);
+			return;
+		}
+	});
+
+
 	http.HandleFunc("/versions/", func(w http.ResponseWriter, r *http.Request) {
 		u := getUser(r);
 		if u == nil {
@@ -215,7 +237,7 @@ func main() {
 			}
 		}
 
-		msg, err := buildShowtimeIndex(reqver);
+		msg, err := buildShowtimeIndex(reqver, r.URL.Query()["betapassword"]);
 		if err != nil {
 			w.WriteHeader(400);
 			io.WriteString(w, err.Error());

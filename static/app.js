@@ -271,6 +271,7 @@ var plugineditor = function(rec, user) {
             anchor: '100%'
         },
 
+/*
 	items: [{
 	    fieldLabel: 'Owner',
             xtype: 'fieldcontainer',
@@ -300,9 +301,27 @@ var plugineditor = function(rec, user) {
 	    fieldLabel: 'Ping URL',
 	    value: 'https://www.lonelycoder.com/pluginadmin/ping/09eaa9e7295def22bbffd87ec0834d7487d345b1'
 	}],
-		
+		*/
+
+	items: [{
+            xtype: 'textfield',
+            name: 'betasecret',
+            fieldLabel: 'Beta testing password',
+            value: rec.betasecret
+	}],
+
+
 	buttons: [{
-	    text: 'Save'
+	    text: 'Save',
+	    handler: function() {
+		var form = this.up('form').getForm();
+		console.log(form);
+		if(form.isValid()){
+		    form.submit({
+			url: 'plugins/' + rec.id
+		    });
+		}
+	    }
 	}],
 	buttonAlign: 'left'
     });
@@ -310,7 +329,7 @@ var plugineditor = function(rec, user) {
 
     var w = Ext.create('Ext.Panel', {
 	region: 'center',
-	title: rec.id,
+	title: 'Editing plugin "' + rec.id + '"',
         layout: {
             type: 'border',
             padding: 5

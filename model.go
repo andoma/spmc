@@ -14,8 +14,8 @@ var plugins map[string]*Plugin = make(map[string]*Plugin);
 type Plugin struct {
 	Id          string `json:"id"`;
 	Owner       string `json:"owner"`;
-	Upstream   *string `json:"upstream,omitempty"`;
-	BetaSecret *string `json:"betasecret,omitempty"`;
+	Upstream    string `json:"upstream,omitempty"`;
+	BetaSecret  string `json:"betasecret,omitempty"`;
 
 	versions map[string]*PluginVersion;
 }

@@ -15,6 +15,7 @@ CREATE TABLE users (
        autoapprove BOOL NOT NULL DEFAULT false
 ) ENGINE InnoDB CHARACTER SET utf8 COLLATE utf8_general_ci;
 
+DROP TABLE version;
 DROP TABLE plugin;
 CREATE TABLE plugin (
        id VARCHAR(128) NOT NULL PRIMARY KEY,
@@ -22,10 +23,10 @@ CREATE TABLE plugin (
        owner VARCHAR(64) NOT NULL,
        pingsecret TEXT NOT NULL,
        pingstatus TEXT NOT NULL,
+       betasecret TEXT NOT NULL,
        FOREIGN KEY (owner) REFERENCES users(username) ON DELETE RESTRICT
 ) ENGINE InnoDB CHARACTER SET utf8 COLLATE utf8_general_ci;
 
-DROP TABLE version;
 CREATE TABLE version (
        plugin_id VARCHAR(128) NOT NULL,
        created TIMESTAMP DEFAULT NOW(),

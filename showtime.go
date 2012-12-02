@@ -22,19 +22,28 @@ type ShowtimeIndex struct {
 	Plugins []IndexedPlugin `json:"plugins"`;
 }
 
-func buildShowtimeIndex(reqver *Version) ([]byte, error) {
+
+func buildShowtimeIndex(reqver *Version, betapasswords []string) ([]byte, error) {
 	var si ShowtimeIndex;
 	
 	si.Version = 1;
 
 	for _, p := range plugins {
 		var best *PluginVersion;
+		var beta = false;
+		for _, pw := range betapasswords {
+			if p.BetaSecret == pw {
+				beta = true;
+				break;
+			}
+		}
+
 		for _, pv := range p.versions {
 			if !pv.Approved {
 				continue;
 			}
 
-			if !pv.Published {
+			if !pv.Published && !beta {
 				continue;
 			}
 			

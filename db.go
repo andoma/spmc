@@ -24,7 +24,7 @@ var (
 	db = autorc.New(db_proto, "", db_addr, db_user, db_pass, db_name);
 	plugin_insert_stmt, version_insert_stmt, version_delete_stmt,
 		approved_set_stmt, published_set_stmt, user_query_stmt,
-		user_insert_stmt, version_dlinc_stmt *autorc.Stmt;
+		user_insert_stmt, version_dlinc_stmt, plugin_update_stmt *autorc.Stmt;
 )
 
 func mysqlError(err error) (ret bool) {
@@ -41,8 +41,8 @@ func mysqlErrExit(err error) {
 	}
 }
 
-func newPlugin(id string, owner string) *Plugin {
-	p := Plugin{id, owner, nil, nil, make(map[string]*PluginVersion)};
+func newPlugin(id, owner, betasecret string) *Plugin {
+	p := Plugin{id, owner, "", betasecret, make(map[string]*PluginVersion)};
 	return &p;
 }
 
@@ -76,13 +76,15 @@ func init() {
 	version_dlinc_stmt, err = db.Prepare("UPDATE version SET downloads=downloads+1 WHERE plugin_id = ? AND version = ?");
 	mysqlErrExit(err);
 
+	plugin_update_stmt, err = db.Prepare("UPDATE plugin SET betasecret=? WHERE id=?");
+	mysqlErrExit(err);
 
-	rows, _, err := db.Query("SELECT id, owner FROM plugin");
+	rows, _, err := db.Query("SELECT id, owner, betasecret FROM plugin");
 	mysqlErrExit(err);
 
 	for _, r := range rows {
 		id    := r.Str(0);
-		plugins[id] = newPlugin(id, r.Str(1));
+		plugins[id] = newPlugin(id, r.Str(1), r.Str(2));
 	}
 
 
@@ -157,7 +159,7 @@ func getOrCreatePlugin(id string, u *User) (*Plugin, error) {
 			return nil, err;
 		}
 		
-		p = newPlugin(id, u.Username);
+		p = newPlugin(id, u.Username, "");
 		plugins[id] = p;
 	} else {
 		if p.Owner != u.Username && u.Admin == false {
@@ -306,4 +308,18 @@ func dbAddUser(username, password, email string) (*User, error) {
 
 	u := User{username, email, false, false};
 	return &u, nil;
+}
+
+
+func updatePlugin(u *User, id, betasecret string) {
+	p := plugins[id];
+	if p == nil {
+		return;
+	}
+	if p.Owner != u.Username && u.Admin == false {
+		return;
+	}
+
+	p.BetaSecret = betasecret;
+	plugin_update_stmt.Exec(betasecret, id);
 }
