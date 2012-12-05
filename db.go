@@ -20,8 +20,9 @@ const (
     db_name  = "showtime_plugins"
 )
 
+var db *autorc.Conn;
+
 var (
-	db = autorc.New(db_proto, "", db_addr, db_user, db_pass, db_name);
 	plugin_insert_stmt, version_insert_stmt, version_delete_stmt,
 		approved_set_stmt, published_set_stmt, user_query_stmt,
 		user_insert_stmt, version_dlinc_stmt, plugin_update_stmt *autorc.Stmt;
@@ -49,6 +50,22 @@ func newPlugin(id, owner, betasecret string) *Plugin {
 
 func init() {
 	var err error;
+
+	loadConf();
+
+	if len(config.Db.Addr) < 1 ||
+		len(config.Db.User) < 1 ||
+		len(config.Db.Pass) < 1 ||
+		len(config.Db.Name) < 1 {
+		fmt.Printf("Missing db config\n");
+		os.Exit(1);
+	}
+
+	db = autorc.New("tcp", "",
+		config.Db.Addr,
+		config.Db.User,
+		config.Db.Pass,
+		config.Db.Name);
 
 	db.Raw.Register("SET NAMES utf8");
 
