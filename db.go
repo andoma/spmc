@@ -24,7 +24,7 @@ var db *autorc.Conn;
 
 var (
 	plugin_insert_stmt, version_insert_stmt, version_delete_stmt,
-		status_set_stmt, published_set_stmt, user_query_stmt,
+		status_set_stmt, published_set_stmt, user_query_stmt, admin_query_stmt,
 		user_insert_stmt, version_dlinc_stmt, plugin_update_stmt *autorc.Stmt;
 )
 
@@ -85,6 +85,9 @@ func init() {
 	mysqlErrExit(err);
 
 	user_query_stmt, err = db.Prepare("SELECT salt, sha1, email, admin, autoapprove FROM users WHERE username = ?");
+	mysqlErrExit(err);
+
+	admin_query_stmt, err = db.Prepare("SELECT username, email, autoapprove FROM users WHERE admin = true");
 	mysqlErrExit(err);
 
 	user_insert_stmt, err = db.Prepare("INSERT INTO users (username, salt, sha1, email) VALUES(?, ?, ?, ?)");
@@ -233,6 +236,13 @@ func ingestVersion(pv *PluginVersion, u *User) (error) {
 		fmt.Sprintf("Version %s of %s was ingested by %s\n%s",
 		pv.Version, pv.PluginId, u.Username, pv.liveStatus()));
 
+	if pv.Status != "a" {
+		notifyAdmin(
+			fmt.Sprintf("Approval needed: %s (%s)", pv.PluginId, pv.Version),
+			fmt.Sprintf("Version %s of %s was ingested by %s",
+			pv.Version, pv.PluginId, u.Username));
+	}
+
 	return nil;
 }
 
@@ -377,6 +387,22 @@ func dbGetUser(username string) (*User, error) {
 	row := rows[0];
 	u := User{username, row.Str(2), row.Bool(3), row.Bool(4)};
 	return &u, nil;
+}
+
+
+func dbGetAdmins() ([]*User, error) {
+	rows, _, err := admin_query_stmt.Exec();
+	if err != nil {
+		return nil, err;
+	}
+
+	users := make([]*User,0,0);
+	
+	for _, row := range rows {
+		u := User{row.Str(0), row.Str(1), true, row.Bool(2)};
+		users = append(users, &u);
+	}
+	return users, nil;
 }
 
 

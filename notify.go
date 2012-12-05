@@ -5,15 +5,10 @@ import "log"
 import "bytes"
 import "fmt"
 
-func notifyUser(username string, subject string, body string) {
+
+func notify(u *User, subject string, body string) {
 
 	loadConf();
-
-	u, err := dbGetUser(username);
-	if err != nil {
-		log.Fatal(err);
-		return;
-	}
 
 	if len(u.Email) == 0 {
 		return;
@@ -52,6 +47,31 @@ func notifyUser(username string, subject string, body string) {
 			return;
 		}
 		log.Printf("Mail sent to %s <%s> : %s\n%s",
-			username, u.Email, subject, body);
+			u.Username, u.Email, subject, body);
 	}();
+}
+
+func notifyUser(username string, subject string, body string) {
+
+
+	u, err := dbGetUser(username);
+	if err != nil {
+		log.Fatal(err);
+		return;
+	}
+	notify(u, subject, body);
+}
+
+
+func notifyAdmin(subject string, body string) {
+
+	admins, err := dbGetAdmins();
+	if err != nil {
+		log.Fatal(err);
+		return;
+	}
+
+	for _, a := range admins {
+		notify(a, subject, body);
+	}
 }
