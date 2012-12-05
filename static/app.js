@@ -73,18 +73,19 @@ Ext.define('My.PluginVersion', {
     idProperty: 'version',
     extend: 'Ext.data.Model',
     fields: ['version', 'title', 'type', 'author', 'showtimeVersion', 
-	     'published', 'approved', 'downloads']
+	     'published', 'status', 'downloads']
 });
 
 
 var plugineditor = function(rec, user) {
 
-    var do_on_selection = function(op) {
+    var do_on_selection = function(op, reason) {
 	var vrec = versionlist.getSelectionModel().getSelection()[0].getData();
 	Ext.Ajax.request({
 	    url: 'versions/' + rec.id + '/' + vrec.version,
 	    params: {
-		op: op
+		op: op,
+		reason: reason
 	    },
 	    success: function() {
 		store.reload();
@@ -106,7 +107,7 @@ var plugineditor = function(rec, user) {
     });
 
     var approve = Ext.create('Ext.Action', {
-	icon: 'static/icons/key_add.png',
+	icon: 'static/icons/accept.png',
         text: 'Approve',
         disabled: true,
         handler: function(widget, event) {
@@ -116,11 +117,30 @@ var plugineditor = function(rec, user) {
 
 
     var unapprove = Ext.create('Ext.Action', {
-	icon: 'static/icons/key_delete.png',
-        text: 'Unapprove',
+	icon: 'static/icons/clock.png',
+        text: 'Set pending',
         disabled: true,
         handler: function(widget, event) {
 	    do_on_selection('unapprove');
+        }
+    });
+
+    var reject = Ext.create('Ext.Action', {
+	icon: 'static/icons/cancel.png',
+        text: 'Reject',
+        disabled: true,
+        handler: function(widget, event) {
+	    Ext.MessageBox.show({
+		title: 'Reject',
+		msg: 'Enter reason:',
+		width:300,
+		buttons: Ext.MessageBox.OKCANCEL,
+		multiline: true,
+		fn: function(res, txt) {
+		    if(res == 'ok')
+			do_on_selection('reject', txt);
+		}
+	    });
         }
     });
 
@@ -147,10 +167,12 @@ var plugineditor = function(rec, user) {
 
 
 
-    var actions = [del, publish, revoke];
+    var actions = [del, '-', publish, revoke];
     if(user.Admin) {
+	actions.push('-');
 	actions.push(approve);
 	actions.push(unapprove);
+	actions.push(reject);
     }
     
     var contextMenu = Ext.create('Ext.menu.Menu', {
@@ -204,12 +226,19 @@ var plugineditor = function(rec, user) {
             flex     : 1,
             dataIndex: 'showtimeVersion'
 	}, {
-	    xtype: 'booleancolumn',
-	    text    : 'Approved',
+	    text    : 'Status',
 	    flex    : 0.5,
-	    dataIndex: 'approved',
-	    trueText: 'Yes',
-            falseText: 'No' 
+	    dataIndex: 'status',
+	    renderer : function(value, metadata, record, row, col, store) {
+		switch(value) {
+		case 'a':
+		    return '<span style="color:green">Approved</span>';
+		case 'p':
+		    return 'Pending'
+		case 'r':
+		    return '<span style="color:red">Rejected</span>';
+		}
+	    }
 	}, {
 	    xtype: 'booleancolumn',
 	    text    : 'Published',
@@ -249,15 +278,17 @@ var plugineditor = function(rec, user) {
 
                 del.enable();
 
-		able(approve,   !d.approved);
-		able(unapprove,  d.approved);
+		able(approve,    d.status != 'a');
+		able(unapprove,  d.status != 'p');
+		able(reject,     d.status != 'r');
 
 		able(publish,   !d.published);
 		able(revoke,     d.published);
 
             } else {
 		for (var v in actions) 
-		    actions[v].disable();
+		    if(typeof actions[v] == 'object')
+			actions[v].disable();
             }
         }
     });
@@ -319,7 +350,6 @@ var plugineditor = function(rec, user) {
 	    text: 'Save',
 	    handler: function() {
 		var form = this.up('form').getForm();
-		console.log(form);
 		if(form.isValid()){
 		    form.submit({
 			url: 'plugins/' + rec.id
@@ -397,7 +427,6 @@ Ext.onReady(function () {
 
     var auth = readCookie("auth");
     var user = Ext.JSON.decode(decode64(auth.split('_')[0]));
-    console.log(user);
     Ext.tip.QuickTipManager.init();
     var autoopen;
 

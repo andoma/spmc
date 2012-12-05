@@ -153,9 +153,11 @@ func main() {
 			case "delete":
 				deleteVersion(c[2], c[3]);
 			case "approve":
-				setApproved(u, c[2], c[3], true);
+				setStatus(u, c[2], c[3], "a", "");
 			case "unapprove":
-				setApproved(u, c[2], c[3], false);
+				setStatus(u, c[2], c[3], "p", "");
+			case "reject":
+				setStatus(u, c[2], c[3], "r", r.Form["reason"][0]);
 			case "publish":
 				setPublished(u, c[2], c[3], true);
 			case "revoke":

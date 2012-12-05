@@ -24,7 +24,7 @@ var db *autorc.Conn;
 
 var (
 	plugin_insert_stmt, version_insert_stmt, version_delete_stmt,
-		approved_set_stmt, published_set_stmt, user_query_stmt,
+		status_set_stmt, published_set_stmt, user_query_stmt,
 		user_insert_stmt, version_dlinc_stmt, plugin_update_stmt *autorc.Stmt;
 )
 
@@ -78,7 +78,7 @@ func init() {
 	version_delete_stmt, err = db.Prepare("DELETE FROM version WHERE plugin_id=? AND version=?");
 	mysqlErrExit(err);
 
-	approved_set_stmt, err = db.Prepare("UPDATE version SET approved=? WHERE plugin_id=? AND version=?");
+	status_set_stmt, err = db.Prepare("UPDATE version SET status=? WHERE plugin_id=? AND version=?");
 	mysqlErrExit(err);
 
 	published_set_stmt, err = db.Prepare("UPDATE version SET published=? WHERE plugin_id=? AND version=?");
@@ -107,7 +107,7 @@ func init() {
 
 	rows, _, err = db.Query("SELECT plugin_id, version, type, author, downloads," + 
                                 "published, showtime_min_version, title, synopsis, description," +
-                                "homepage, pkg_digest, comment, category, approved, icon_digest FROM version");
+                                "homepage, pkg_digest, comment, category, status, icon_digest FROM version");
 	mysqlErrExit(err);
 
 	for _, r := range rows {
@@ -128,7 +128,7 @@ func init() {
 		PkgDigest: r.Str(11),
 		Comment: r.Str(12),
 		Category: r.Str(13),
-		Approved: r.Bool(14),
+		Status: r.Str(14),
 		IconDigest: r.Str(15),
 		};
 		plugins[plugin_id].versions[version] = &v;
@@ -227,6 +227,12 @@ func ingestVersion(pv *PluginVersion, u *User) (error) {
 
 	p.versions[pv.Version] = pv;
 	pkgHashToVersion[pv.PkgDigest] = pv;
+
+	notifyUser(p.Owner,
+		fmt.Sprintf("Ingested: %s (%s)", pv.PluginId, pv.Version),
+		fmt.Sprintf("Version %s of %s was ingested by %s\n%s",
+		pv.Version, pv.PluginId, u.Username, pv.liveStatus()));
+
 	return nil;
 }
 
@@ -241,16 +247,40 @@ func deleteVersion(plugin, version string) {
 	}
 }
 
-func setApproved(u *User, plugin, version string, set bool) {
+
+
+func setStatus(u *User, plugin, version, newStatus, reason string) {
 	if !u.Admin {
 		return;
 	}
 	p := plugins[plugin];
-	if p != nil {
-		approved_set_stmt.Exec(set, plugin, version);
-		p.versions[version].Approved = set;
-		log.Printf("Plugin %s version %s approved set to %t by %s",
-			plugin, version, set, u.Username);
+	if p == nil {
+		return;
+	}
+	status_set_stmt.Exec(newStatus, plugin, version);
+	pv := p.versions[version];
+	pv.Status = newStatus;
+
+	switch newStatus {
+
+	case "a":
+		log.Printf("Plugin %s version %s approved by %s",
+			plugin, version, u.Username);
+		notifyUser(p.Owner,
+			fmt.Sprintf("Approved: %s (%s)", plugin, version),
+			fmt.Sprintf("Version %s of %s was approved by %s.\n%s",
+			version, plugin, u.Username, pv.liveStatus()));
+	case "r":
+		log.Printf("Plugin %s version %s rejected by %s",
+			plugin, version, u.Username);
+		notifyUser(p.Owner,
+			fmt.Sprintf("Rejected: %s (%s)", plugin, version),
+			fmt.Sprintf("Version %s of %s was rejected by %s.\n%s",
+			version, plugin, u.Username, reason));
+	case "p":
+		log.Printf("Plugin %s version %s back to pending by %s",
+			plugin, version, u.Username);
+			
 	}
 }
 
@@ -259,9 +289,15 @@ func setPublished(u *User, plugin, version string, set bool) {
 	p := plugins[plugin];
 	if p != nil && (u.Admin || p.Owner == u.Username) {
 		published_set_stmt.Exec(set, plugin, version);
-		p.versions[version].Published = set;
+		pv := p.versions[version];
+		pv.Published = set;
 		log.Printf("Plugin %s version %s published set to %t by %s",
 			plugin, version, set, u.Username);
+		notifyUser(p.Owner,
+			fmt.Sprintf("Published: %s (%s)", plugin, version),
+			fmt.Sprintf("Version %s of %s was published by %s.\n%s",
+			version, plugin, u.Username, pv.liveStatus()));
+
 	}
 }
 
@@ -324,6 +360,22 @@ func dbAddUser(username, password, email string) (*User, error) {
 	}
 
 	u := User{username, email, false, false};
+	return &u, nil;
+}
+
+
+func dbGetUser(username string) (*User, error) {
+	rows, _, err := user_query_stmt.Exec(username);
+	if err != nil {
+		return nil, err;
+	}
+	
+	if len(rows) == 0 {
+		return nil, errors.New("Invalid username or password");
+	}
+
+	row := rows[0];
+	u := User{username, row.Str(2), row.Bool(3), row.Bool(4)};
 	return &u, nil;
 }
 

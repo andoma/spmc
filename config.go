@@ -11,8 +11,15 @@ type DbConfig struct {
 	Name string `json:"database"`;
 };
 
+
+type MailConfig struct {
+	Sender string `json:"sender"`;
+	Server string `json:"server"`;
+};
+
 type Config struct {
 	Db DbConfig  `json:"db"`;
+	Mail MailConfig  `json:"mail"`;
 }
 
 var config *Config;

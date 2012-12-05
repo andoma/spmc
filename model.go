@@ -92,7 +92,7 @@ func (v *Version) isBiggerOrEqThan(l *Version) bool {
 var pkgHashToVersion map[string]*PluginVersion = make(map[string]*PluginVersion);
 
 type PluginVersion struct {
-	Approved        bool   `json:"approved"`;
+	Status          string `json:"status"`;
 	Published       bool   `json:"published"`;
 	Comment         string `json:"comment"`;
 	PluginId        string `json:"id"`;
@@ -137,6 +137,27 @@ func getVersions(id string) *PluginVersions {
 	return &pv;
 }
 
+
+
+func (pv *PluginVersion)liveStatus() string {
+	if pv.Status == "a" && pv.Published {
+		return "This version is now live";
+	}
+	if pv.Status == "p" {
+		return "This version is not live (Version not yet approved)";
+	}
+
+	if pv.Status == "r" {
+		return fmt.Sprintf("This version is not live. Version rejected:\n%s",
+			pv.Comment);
+	}
+
+	if pv.Status == "a" {
+		return "This version is not live. Approved but not publised by owner (you)\n" +
+			"Note: Users with beta password are allowed to download the plugin";
+	}
+	return "";
+}
 
 type User struct {
 	Username string;
