@@ -160,6 +160,10 @@ var plugineditor = function(rec, user) {
     var store = Ext.create('Ext.data.Store', {
         autoLoad: true,
         model: 'My.PluginVersion',
+	sorters: [{
+            property: 'version',
+            direction: 'ASC'
+	}],
         proxy: {
             type: 'ajax',
             url: 'versions/' + rec.id,
