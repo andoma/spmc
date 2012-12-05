@@ -31,20 +31,25 @@ func buildShowtimeIndex(reqver *Version, betapasswords []string) ([]byte, error)
 	for _, p := range plugins {
 		var best *PluginVersion;
 		var beta = false;
+		var allAccess = false;
 		for _, pw := range betapasswords {
+			if len(config.AllAccess) > 1 && config.AllAccess == pw {
+				allAccess = true;
+			}
 			if p.BetaSecret == pw {
 				beta = true;
-				break;
 			}
 		}
 
 		for _, pv := range p.versions {
-			if pv.Status != "a" {
-				continue;
-			}
+			if !allAccess {
+				if pv.Status != "a" {
+					continue;
+				}
 
-			if !pv.Published && !beta {
-				continue;
+				if !pv.Published && !beta {
+					continue;
+				}
 			}
 			
 			if reqver != nil && pv.showtime_ver.isBiggerThan(reqver) {

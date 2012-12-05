@@ -20,6 +20,7 @@ type MailConfig struct {
 type Config struct {
 	Db DbConfig  `json:"db"`;
 	Mail MailConfig  `json:"mail"`;
+	AllAccess string `json:"allaccess"`
 }
 
 var config *Config;
