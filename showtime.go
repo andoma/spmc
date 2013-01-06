@@ -42,8 +42,15 @@ func buildShowtimeIndex(reqver *Version, betapasswords []string) ([]byte, error)
 		}
 
 		for _, pv := range p.versions {
+			if pv.Status != "r" {
+				// Rejected
+				continue;
+			}
+
 			if !allAccess {
-				if pv.Status != "a" {
+
+				// If it's not approved, limit to 50 downloads for beta mode
+				if pv.Status != "a" && (!beta || pv.Downloads >= 50) {
 					continue;
 				}
 
