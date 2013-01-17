@@ -16,6 +16,7 @@ type Plugin struct {
 	Owner       string `json:"owner"`;
 	Upstream    string `json:"upstream,omitempty"`;
 	BetaSecret  string `json:"betasecret,omitempty"`;
+	DownloadURL string `json:"downloadurl,omitempty"`;
 
 	versions map[string]*PluginVersion;
 }

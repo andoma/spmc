@@ -7,6 +7,7 @@ Ext.require([
 ]);
 
 
+
 Ext.define('My.Notifyclient', {
     mixins: {
         observable: 'Ext.util.Observable'
@@ -65,7 +66,7 @@ Ext.define('My.Notifyclient', {
 
 Ext.define('My.Plugin', {
     extend: 'Ext.data.Model',
-    fields: ['id', 'owner', 'upstream', 'betasecret']
+    fields: ['id', 'owner', 'upstream', 'betasecret', 'downloadurl']
 });
 
 
@@ -74,6 +75,25 @@ Ext.define('My.PluginVersion', {
     extend: 'Ext.data.Model',
     fields: ['version', 'title', 'type', 'author', 'showtimeVersion', 
 	     'published', 'status', 'downloads']
+});
+
+
+
+var pluginstore = Ext.create('Ext.data.Store', {
+    autoLoad: true,
+    model: 'My.Plugin',
+    sorters: [{
+        property: 'id',
+        direction: 'ASC'
+    }],
+    proxy: {
+        type: 'ajax',
+        url: 'plugins',
+        reader: {
+            type: 'json',
+            root: 'plugins'
+        }
+    }
 });
 
 
@@ -296,6 +316,44 @@ var plugineditor = function(rec, user) {
 
 //---------------------------------------
 
+
+    var dlbtn = Ext.create('Ext.Button', {
+	text: 'Download from upstream',
+	handler: function() {
+	    Ext.MessageBox.show({
+		msg: 'Ingest new plugin',
+		progressText: 'Downloading...',
+		width:300,
+		wait:true,
+		waitConfig: {interval:200}
+	    });
+
+
+	    Ext.Ajax.request({
+		url: 'getFromUpstream/' + rec.id,
+		success: function(response) {
+		    var v = Ext.JSON.decode(response.responseText);
+		    Ext.MessageBox.hide();
+
+		    if(!v.success) {
+			Ext.Msg.alert('SPMC error', v.error);
+		    } else {
+			console.log(v);
+			autoopen = v.result.id;
+			store.reload();
+		    }
+		},
+		failure: function(fp, o) {
+		    Ext.MessageBox.hide();
+		    Ext.Msg.alert('Communication error', o.result.error);
+		}
+	    });
+	}
+    });
+
+    if(!rec.downloadurl)
+	dlbtn.disable();
+
     var form = Ext.create('Ext.form.Panel', {
 	region: 'north',
         bodyPadding: 5,
@@ -306,43 +364,16 @@ var plugineditor = function(rec, user) {
             anchor: '100%'
         },
 
-/*
-	items: [{
-	    fieldLabel: 'Owner',
-            xtype: 'fieldcontainer',
-            layout: 'hbox',
-	    fieldDefaults: {
-		labelAlign: 'right',
-		labelWidth: 200,
-		flex: 1
-            },
-	    items: [{
-		xtype: 'textfield',
-		name: 'owner',
-		value: rec.owner
-            }, {
-		xtype: 'textfield',
-		name: 'betasecret',
-		fieldLabel: 'Beta password',
-		value: rec.betasecret
-	    }]
-	},{
-            xtype: 'textfield',
-            name: 'upstream',
-            fieldLabel: 'Upstream URL',
-            value: rec.upstream
-        },{
-	    xtype: 'displayfield',
-	    fieldLabel: 'Ping URL',
-	    value: 'https://www.lonelycoder.com/pluginadmin/ping/09eaa9e7295def22bbffd87ec0834d7487d345b1'
-	}],
-		*/
-
 	items: [{
             xtype: 'textfield',
             name: 'betasecret',
             fieldLabel: 'Beta testing password',
             value: rec.betasecret
+	},{
+            xtype: 'textfield',
+            name: 'downloadurl',
+            fieldLabel: 'Upstream URL (zipfile)',
+            value: rec.downloadurl
 	}],
 
 
@@ -351,12 +382,23 @@ var plugineditor = function(rec, user) {
 	    handler: function() {
 		var form = this.up('form').getForm();
 		if(form.isValid()){
+		    var vals = form.getFieldValues();
+		    if(vals['downloadurl'])
+			dlbtn.enable();
+		    else
+			dlbtn.disable();
+
 		    form.submit({
-			url: 'plugins/' + rec.id
+			url: 'plugins/' + rec.id,
+
+			success: function(fp, o) {
+			    console.log('reloading');
+			    pluginstore.reload();
+			}
 		    });
 		}
 	    }
-	}],
+	},dlbtn],
 	buttonAlign: 'left'
     });
 
@@ -430,22 +472,6 @@ Ext.onReady(function () {
     Ext.tip.QuickTipManager.init();
     var autoopen;
 
-    var store = Ext.create('Ext.data.Store', {
-        autoLoad: true,
-        model: 'My.Plugin',
-	sorters: [{
-            property: 'id',
-            direction: 'ASC'
-	}],
-        proxy: {
-            type: 'ajax',
-            url: 'plugins',
-            reader: {
-                type: 'json',
-                root: 'plugins'
-            }
-        }
-    });
 
 //    var notifier = new My.Notifyclient({url: '/comet'})
     var uploadWin;
@@ -503,7 +529,7 @@ Ext.onReady(function () {
 					    uploadBtn.enable();
 					    win.hide();
 					    autoopen = o.result.result.id;
-					    store.reload();
+					    pluginstore.reload();
 					    
 					},
 					failure: function(fp, o) {
@@ -535,7 +561,7 @@ Ext.onReady(function () {
     });
 
     var pluginlist = Ext.create('Ext.grid.Panel', {
-	store: store,
+	store: pluginstore,
         title: 'Showtime plugin manager. Logged in as "' + user.Username + '"' +
 	    (user.Admin ? ' [Administrator]' : ''),
         region: 'west',
@@ -561,7 +587,7 @@ Ext.onReady(function () {
 		icon: 'static/icons/refresh.gif',
 		text: 'Refresh',
 		handler: function() {
-		    store.reload();
+		    pluginstore.reload();
 		}
 
 		
@@ -594,7 +620,7 @@ Ext.onReady(function () {
     });
 
 
-    store.on('load', function() {
+    pluginstore.on('load', function() {
 	if(autoopen) {
 	    if(current)
 		vp.remove(current);

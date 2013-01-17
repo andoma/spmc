@@ -121,7 +121,10 @@ func main() {
 				return;
 			}
 			r.ParseForm();
-			updatePlugin(u, c[2], r.Form["betasecret"][0]);
+			log.Printf("%s\n", r.Form["downloadurl"][0]);
+			updatePlugin(u, c[2],
+				r.Form["betasecret"][0],
+				r.Form["downloadurl"][0]);
 			w.WriteHeader(200);
 			return;
 		}
@@ -183,7 +186,10 @@ func main() {
 			return;
 		}
 		flen, _ := file.Seek(0, 2);
-		pv, err := ingestFile(file, flen, u);
+
+		zb := zipblob{file, flen};
+
+		pv, err := ingestFile(zb, u, nil);
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8");
 
@@ -279,6 +285,35 @@ func main() {
 			dbIncDownloads(c[2]);
 		}
 	});
+
+
+	http.HandleFunc("/getFromUpstream/", func(w http.ResponseWriter, r *http.Request) {
+		c := strings.Split(r.URL.Path, "/");
+		if len(c) != 3 {
+			w.WriteHeader(400);
+			return;
+		}
+
+		p := plugins[c[2]];
+
+		w.Header().Set("Content-Type", "application/json");
+
+		pv, err := downloadFile(p.DownloadURL, getUser(r), &c[2]);
+		if err != nil {
+			out, _ := json.Marshal(struct {
+				Success bool `json:"success"`;
+				Error string `json:"error"`;
+			}{false, err.Error()});
+			w.Write(out);
+		} else {
+			out, _ := json.Marshal(struct {
+				Success bool `json:"success"`;
+				Version *PluginVersion `json:"result"`;
+			}{true, pv});
+			w.Write(out);
+		}
+	});
+
 
 	http.HandleFunc("/spmc", roothandler);
 	http.HandleFunc("/", roothandler);
