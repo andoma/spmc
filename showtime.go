@@ -42,7 +42,7 @@ func buildShowtimeIndex(reqver *Version, betapasswords []string) ([]byte, error)
 		}
 
 		for _, pv := range p.versions {
-			if pv.Status != "r" {
+			if pv.Status == "r" {
 				// Rejected
 				continue;
 			}
