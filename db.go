@@ -73,7 +73,7 @@ func init() {
 	plugin_insert_stmt, err = db.Prepare("INSERT INTO plugin (id, owner) VALUES(?, ?)");
 	mysqlErrExit(err);
 
-	version_insert_stmt, err = db.Prepare("INSERT INTO version (plugin_id, version, type, author, showtime_min_version, title, synopsis, description, homepage, pkg_digest, category, icon_digest) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+	version_insert_stmt, err = db.Prepare("INSERT INTO version (plugin_id, version, type, author, showtime_min_version, title, synopsis, description, homepage, pkg_digest, category, icon_digest, status) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 	mysqlErrExit(err);
 
 	version_delete_stmt, err = db.Prepare("DELETE FROM version WHERE plugin_id=? AND version=?");
@@ -222,7 +222,8 @@ func ingestVersion(pv *PluginVersion, u *User) (error) {
 		pv.Homepage,
 		pv.PkgDigest,
 		pv.Category,
-		pv.IconDigest);
+		pv.IconDigest,
+		pv.Status);
 
 	if err != nil {
 		log.Println("MySQL error:", err);
