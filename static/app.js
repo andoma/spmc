@@ -296,7 +296,7 @@ var plugineditor = function(rec, user) {
             if (selections.length == 1) {
 		d = selections[0].getData();
 
-		able(del,        d.status == 'r');
+		able(del,        d.status == 'p');
 
 		able(approve,    d.status != 'a');
 		able(unapprove,  d.status != 'p');
