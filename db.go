@@ -251,11 +251,13 @@ func ingestVersion(pv *PluginVersion, u *User) (error) {
 func deleteVersion(plugin, version string) {
 	p := plugins[plugin];
 	if p != nil {
-		version_delete_stmt.Exec(plugin, version);
 		pv := p.versions[version];
-		delete(pkgHashToVersion, pv.PkgDigest);
-		delete(p.versions, version);
-		log.Printf("Deleted version %s from plugin %s", version, plugin);
+		if pv.Status == "p" {
+			version_delete_stmt.Exec(plugin, version);
+			delete(pkgHashToVersion, pv.PkgDigest);
+			delete(p.versions, version);
+			log.Printf("Deleted version %s from plugin %s", version, plugin);
+		}
 	}
 }
 
