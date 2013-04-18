@@ -17,9 +17,15 @@ type IndexedPlugin struct {
 	Icon            string `json:"icon"`;
 }
 
+type BlackListVersion struct {
+	PluginId        string `json:"id"`;
+	Version         string `json:"version"`;
+}
+
 type ShowtimeIndex struct {
 	Version int `json:"version"`;
 	Plugins []IndexedPlugin `json:"plugins"`;
+	BlackList []BlackListVersion `json:"blacklist"`;
 }
 
 
@@ -44,6 +50,12 @@ func buildShowtimeIndex(reqver *Version, betapasswords []string) ([]byte, error)
 		for _, pv := range p.versions {
 			if pv.Status == "r" {
 				// Rejected
+
+				blv := BlackListVersion{
+				PluginId: pv.PluginId,
+				Version: pv.Version,
+				};
+				si.BlackList = append(si.BlackList, blv);
 				continue;
 			}
 
