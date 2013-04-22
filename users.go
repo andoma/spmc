@@ -86,3 +86,38 @@ func validateCookie(cookie string) (*User) {
 
 	return u;
 }
+
+
+func validateTracking(cookie string) (*string) {
+	c := strings.Split(cookie, "_");
+	if len(c) != 2 {
+		return nil;
+	}
+	h := hmac.New(sha1.New, cookie_key[:]);
+	h.Write([]byte(c[0]));
+	sig := base64.StdEncoding.EncodeToString(h.Sum(nil));
+
+	if sig != c[1] {
+		return nil;
+	}
+	return &c[0];
+}
+
+
+func generateTracking() (*string, *string) {
+
+	var blb[16] byte;
+
+	n, err := io.ReadFull(rand.Reader, blb[:]);
+	if err != nil || n != 16 {
+		return nil, nil;
+	}
+
+	tag := base64.StdEncoding.EncodeToString([]byte(blb[:]));
+	
+	h := hmac.New(sha1.New, cookie_key[:]);
+	h.Write([]byte(tag));
+	sig := base64.StdEncoding.EncodeToString(h.Sum(nil));
+	cookie := fmt.Sprintf("%s_%s\n", tag, sig);
+	return &tag, &cookie;
+}

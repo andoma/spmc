@@ -10,12 +10,23 @@ import "regexp"
 import "strconv"
 import "fmt"
 import "crypto/sha1"
+import "time"
+import (
+	"github.com/nranchev/go-libGeoIP"
+)
 
 var ua_re *regexp.Regexp;
+var min_track_version *Version;
+var geoipdb *libgeo.GeoIP;
 
 func init() {
 	ua_re = regexp.MustCompile("^Showtime [^ ]+ ([0-9]+)\\.([0-9]+)\\.([0-9]+)"); 
+	min_track_version, _ = parseVersionString("4.3.181");
+	geoipdb, _ = libgeo.Load("/usr/share/GeoIP/GeoIP.dat")
+
 }
+
+
 
 func httplog(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -32,6 +43,56 @@ func getUser(r *http.Request) *User {
 	}
 	return validateCookie(cookie.Value);
 }
+
+func track(w http.ResponseWriter, r *http.Request, reqver *Version, ua string) {
+
+	var ipaddr *string;
+
+	if len(r.Header["X-Forwarded-For"]) > 0 {
+		ipaddr = &r.Header["X-Forwarded-For"][0];
+	} else {
+		ipaddr = &strings.Split(r.RemoteAddr, ":")[0];
+	}
+	
+	if reqver == nil {
+		return;
+	}
+
+	if !reqver.isBiggerThan(min_track_version) {
+		return;
+	}
+
+	// Lookup the IP and display the details if country is found
+	loc := geoipdb.GetLocationByIP(*ipaddr);
+
+	cc := "ZZ";
+
+	if loc != nil {
+		cc = loc.CountryCode;
+	}
+
+	cookie, _ := r.Cookie("spmc");
+	if cookie != nil {
+
+		tag := validateTracking(cookie.Value);
+
+		if tag != nil {
+			updateTracking(*tag, ua, *ipaddr, cc);
+			return;
+		}
+	}
+
+	tag, value := generateTracking();
+
+	c := new(http.Cookie);
+	c.Name = "spmc";
+	c.Value = *value;
+	c.Expires = time.Unix(2147480000, 0);
+	http.SetCookie(w, c);
+	updateTracking(*tag, ua, *ipaddr, cc);
+
+}
+
 
 func roothandler(w http.ResponseWriter, r *http.Request) {
 	u := getUser(r);
@@ -232,9 +293,14 @@ func main() {
 	http.HandleFunc("/plugins-v1.json", func(w http.ResponseWriter, r *http.Request) {
 
 		var reqver *Version;
+		var ua *string;
 
 		if len(r.Header["User-Agent"]) > 0 {
-			vers := ua_re.FindStringSubmatch(r.Header["User-Agent"][0]);
+			ua = &r.Header["User-Agent"][0];
+		}
+
+		if ua != nil {
+			vers := ua_re.FindStringSubmatch(*ua);
 			if len(vers) > 2 {
 				reqver = new(Version);
 				reqver.v[0], _ = strconv.Atoi(vers[1]);
@@ -256,14 +322,19 @@ func main() {
 		h.Write(msg);
 		digest := fmt.Sprintf("%x", h.Sum(nil));
 
+		if ua != nil {
+			track(w, r, reqver, *ua);
+		}
+
 		if len(r.Header["If-None-Match"]) > 0 {
 			if digest == r.Header["If-None-Match"][0] {
 				fmt.Printf("Not modified\n");
 				w.WriteHeader(304);
 				return;
-				}
+			}
 		}
-		
+
+
 		w.Header().Set("ETag", digest);
 
 		w.Write(msg);
@@ -320,3 +391,5 @@ func main() {
 
 	http.ListenAndServe("127.0.0.1:8080", httplog(http.DefaultServeMux));
 }
+
+

@@ -25,7 +25,8 @@ var db *autorc.Conn;
 var (
 	plugin_insert_stmt, version_insert_stmt, version_delete_stmt,
 		status_set_stmt, published_set_stmt, user_query_stmt, admin_query_stmt,
-		user_insert_stmt, version_dlinc_stmt, plugin_update_stmt *autorc.Stmt;
+		user_insert_stmt, version_dlinc_stmt, plugin_update_stmt,
+		track_update_stmt *autorc.Stmt;
 )
 
 func mysqlError(err error) (ret bool) {
@@ -98,6 +99,9 @@ func init() {
 	mysqlErrExit(err);
 
 	plugin_update_stmt, err = db.Prepare("UPDATE plugin SET betasecret=?, downloadurl=? WHERE id=?");
+	mysqlErrExit(err);
+
+	track_update_stmt, err = db.Prepare("INSERT INTO tracking (id, ua, count, ipaddr, cc) VALUE (?, ?, 1, ?, ?) ON DUPLICATE KEY UPDATE count=count + 1, ua=?, updated=now(), ipaddr=?, cc=?");
 	mysqlErrExit(err);
 
 	rows, _, err := db.Query("SELECT id, owner, betasecret,downloadurl FROM plugin");
@@ -422,4 +426,9 @@ func updatePlugin(u *User, id, betasecret string, downloadurl string) {
 	p.BetaSecret = betasecret;
 	p.DownloadURL = downloadurl;
 	plugin_update_stmt.Exec(betasecret, downloadurl, id);
+}
+
+
+func updateTracking(id string, ua string, ipaddr string, cc string) {
+	track_update_stmt.Exec(id, ua, ipaddr, cc, ua, ipaddr, cc);
 }
