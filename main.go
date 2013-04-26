@@ -357,6 +357,40 @@ func main() {
 		}
 	});
 
+	http.HandleFunc("/erasePlugin/", func(w http.ResponseWriter, r *http.Request) {
+		u := getUser(r);
+		if u == nil {
+			w.WriteHeader(401);
+			return;
+		}
+
+		if !u.Admin {
+			w.WriteHeader(403);
+			return;
+		}
+
+		c := strings.Split(r.URL.Path, "/");
+		if len(c) != 3 {
+			w.WriteHeader(400);
+			return;
+		}
+
+		id := c[2];
+		err := erasePlugin(id);
+		w.Header().Set("Content-Type", "application/json");
+		if err != nil {
+			out, _ := json.Marshal(struct {
+				Success bool `json:"success"`;
+				Error string `json:"error"`;
+			}{false, err.Error()});
+			w.Write(out);
+		} else {
+			out, _ := json.Marshal(struct {
+				Success bool `json:"success"`;
+			}{true});
+			w.Write(out);
+		}
+	});
 
 	http.HandleFunc("/getFromUpstream/", func(w http.ResponseWriter, r *http.Request) {
 		c := strings.Split(r.URL.Path, "/");

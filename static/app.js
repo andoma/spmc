@@ -353,6 +353,62 @@ var plugineditor = function(rec, user) {
 
     if(!rec.downloadurl)
 	dlbtn.disable();
+  
+    var buttons = [{
+	text: 'Save',
+	handler: function() {
+	var form = this.up('form').getForm();
+	    if(form.isValid()){
+		var vals = form.getFieldValues();
+		if(vals['downloadurl'])
+		    dlbtn.enable();
+		else
+		    dlbtn.disable();
+		
+		form.submit({
+		    url: 'plugins/' + rec.id,
+	    
+		    success: function(fp, o) {
+			console.log('reloading');
+			pluginstore.reload();
+		    }
+		});
+	    }
+	}
+    }];
+
+
+    buttons.push(dlbtn);
+
+    if(user.Admin) {
+	buttons.push({
+	    text: 'Erase',
+	    handler: function() {
+		Ext.MessageBox.confirm('Erase "' + rec.id +'"', 'Are you sure', function(res) {
+		    if(res == 'yes')  {
+
+			Ext.Ajax.request({
+			    method: 'POST',
+			    url: 'erasePlugin/' + rec.id,			
+			    success: function(response) {
+				var v = Ext.JSON.decode(response.responseText);
+
+				if(!v.success) {
+				    Ext.Msg.alert('SPMC error', v.error);
+				} else {
+				    editor.close();
+				    pluginstore.reload();
+				}
+			    },
+			    failure: function(fp, o) {
+				Ext.Msg.alert('Communication error', o.result.error);
+			    }
+			});
+		    }
+		});
+	    }
+	});
+    }
 
     var form = Ext.create('Ext.form.Panel', {
 	region: 'north',
@@ -377,33 +433,12 @@ var plugineditor = function(rec, user) {
 	}],
 
 
-	buttons: [{
-	    text: 'Save',
-	    handler: function() {
-		var form = this.up('form').getForm();
-		if(form.isValid()){
-		    var vals = form.getFieldValues();
-		    if(vals['downloadurl'])
-			dlbtn.enable();
-		    else
-			dlbtn.disable();
-
-		    form.submit({
-			url: 'plugins/' + rec.id,
-
-			success: function(fp, o) {
-			    console.log('reloading');
-			    pluginstore.reload();
-			}
-		    });
-		}
-	    }
-	},dlbtn],
+	buttons: buttons,
 	buttonAlign: 'left'
     });
 
 
-    var w = Ext.create('Ext.Panel', {
+    var editor = Ext.create('Ext.Panel', {
 	region: 'center',
 	title: 'Editing plugin "' + rec.id + '"',
         layout: {
@@ -416,7 +451,7 @@ var plugineditor = function(rec, user) {
         items: [form, versionlist]
     });
     
-    return w;
+    return editor;
 }
 
 function readCookie(name) {
@@ -625,7 +660,7 @@ Ext.onReady(function () {
 	    if(current)
 		vp.remove(current);
 
-	    rec = store.getById(autoopen);
+	    rec = pluginstore.getById(autoopen);
 	    autoopen = null;
 	    current = vp.add(new plugineditor(rec.getData(), user));
 	    vp.doLayout();

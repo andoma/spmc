@@ -26,7 +26,8 @@ var (
 	plugin_insert_stmt, version_insert_stmt, version_delete_stmt,
 		status_set_stmt, published_set_stmt, user_query_stmt, admin_query_stmt,
 		user_insert_stmt, version_dlinc_stmt, plugin_update_stmt,
-		track_update_stmt *autorc.Stmt;
+		track_update_stmt,
+		plugin_delete_stmt *autorc.Stmt;
 )
 
 func mysqlError(err error) (ret bool) {
@@ -103,6 +104,10 @@ func init() {
 
 	track_update_stmt, err = db.Prepare("INSERT INTO tracking (id, ua, count, ipaddr, cc) VALUE (?, ?, 1, ?, ?) ON DUPLICATE KEY UPDATE count=count + 1, ua=?, updated=now(), ipaddr=?, cc=?");
 	mysqlErrExit(err);
+
+	plugin_delete_stmt, err = db.Prepare("DELETE FROM plugin WHERE id=?");
+	mysqlErrExit(err);
+
 
 	rows, _, err := db.Query("SELECT id, owner, betasecret,downloadurl FROM plugin");
 	mysqlErrExit(err);
@@ -431,4 +436,21 @@ func updatePlugin(u *User, id, betasecret string, downloadurl string) {
 
 func updateTracking(id string, ua string, ipaddr string, cc string) {
 	track_update_stmt.Exec(id, ua, ipaddr, cc, ua, ipaddr, cc);
+}
+
+
+func erasePlugin(id string) (error) {
+	fmt.Printf("id = %s\n", id);
+	p := plugins[id];
+	if p == nil {
+		return errors.New(fmt.Sprintf("Plugin '%s' not found", id));
+	}
+
+	for _, v := range p.versions {
+		version_delete_stmt.Exec(id, v);
+		delete(pkgHashToVersion, v.PkgDigest);
+	}
+	plugin_delete_stmt.Exec(id);
+	delete(plugins, id);
+	return nil;
 }
