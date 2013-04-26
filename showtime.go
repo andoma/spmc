@@ -1,6 +1,7 @@
 package main
 
 import "encoding/json"
+import "sort"
 
 type IndexedPlugin struct {
 	PluginId        string `json:"id"`;
@@ -34,7 +35,18 @@ func buildShowtimeIndex(reqver *Version, betapasswords []string) ([]byte, error)
 	
 	si.Version = 1;
 
-	for _, p := range plugins {
+	s_plugins := make([]string, len(plugins));
+	i := 0;
+	for k, _ := range plugins {
+		s_plugins[i] = k;
+		i++;
+	}
+	sort.Strings(s_plugins);
+
+	for _, pid := range s_plugins {
+
+		p := plugins[pid];
+
 		var best *PluginVersion;
 		var beta = false;
 		var allAccess = false;
@@ -47,7 +59,17 @@ func buildShowtimeIndex(reqver *Version, betapasswords []string) ([]byte, error)
 			}
 		}
 
-		for _, pv := range p.versions {
+		s_versions := make([]string, len(p.versions));
+		i := 0;
+		for k, _ := range p.versions {
+			s_versions[i] = k;
+			i++;
+		}
+		sort.Strings(s_versions);
+
+		for _, pvid := range s_versions {
+			pv := p.versions[pvid];
+
 			if pv.Status == "r" {
 				// Rejected
 
