@@ -21,7 +21,7 @@ func notify(u *User, subject string, body string) {
 	go func() {
 		c, err := smtp.Dial(config.Mail.Server);
 		if err != nil {
-			log.Fatal(err);
+			log.Print(err);
 			return;
 		}
 		// Set the sender and recipient.
@@ -29,7 +29,7 @@ func notify(u *User, subject string, body string) {
 		c.Rcpt(u.Email);
 		wc, err := c.Data();
 		if err != nil {
-			log.Fatal(err);
+			log.Print(err);
 			return;
 		}
 
@@ -43,7 +43,7 @@ func notify(u *User, subject string, body string) {
 		defer wc.Close();
 		buf := bytes.NewBufferString(hdrs + body);
 		if _, err = buf.WriteTo(wc); err != nil {
-			log.Fatal(err);
+			log.Print(err);
 			return;
 		}
 		log.Printf("Mail sent to %s <%s> : %s\n%s",
@@ -56,7 +56,7 @@ func notifyUser(username string, subject string, body string) {
 
 	u, err := dbGetUser(username);
 	if err != nil {
-		log.Fatal(err);
+		log.Print(err);
 		return;
 	}
 	notify(u, subject, body);
@@ -67,7 +67,7 @@ func notifyAdmin(subject string, body string) {
 
 	admins, err := dbGetAdmins();
 	if err != nil {
-		log.Fatal(err);
+		log.Print(err);
 		return;
 	}
 

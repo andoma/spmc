@@ -96,7 +96,7 @@ func pvFromZIPblob(zb zipblob) (pv *PluginVersion, rzb zipblob, err error) {
 
 	j, err := f.Open();
 	if err != nil {
-		log.Fatal(err);
+		log.Print(err);
 		return nil, zb, err;
 	}			
 	pv = new(PluginVersion);
